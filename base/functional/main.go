@@ -9,7 +9,7 @@ import (
 )
 
 func writeFile(filename string) {
-	file, err := os.OpenFile(filename, os.O_WRONLY, 0666)
+	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0666)
 	util.PanicErr(err)
 	defer util.DeferPanicErr(file.Close)
 

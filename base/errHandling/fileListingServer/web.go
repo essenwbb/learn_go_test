@@ -8,12 +8,34 @@ import (
 	"os"
 )
 
+type userError interface {
+	error
+	Message() string
+}
+
 type appHandler func(http.ResponseWriter, *http.Request) error
 
 func errWrapper(handler appHandler) func(http.ResponseWriter, *http.Request) {
 	return func(writer http.ResponseWriter, request *http.Request) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Errorf("Panic: %v", r)
+				http.Error(writer,
+					http.StatusText(http.StatusInternalServerError),
+					http.StatusInternalServerError)
+			}
+		}()
+
 		err := handler(writer, request)
 		if err != nil {
+
+			if userErr, ok := err.(userError); ok {
+				http.Error(writer,
+					userErr.Message(),
+					http.StatusBadRequest)
+				return
+			}
+
 			log.Warnf("Error Handling request: %s", err.Error())
 			code := http.StatusOK
 			switch {
@@ -33,12 +55,15 @@ func errWrapper(handler appHandler) func(http.ResponseWriter, *http.Request) {
 func init() {
 	log.SetFormatter(&log.TextFormatter{})
 	log.SetOutput(os.Stdout)
-	log.SetLevel(log.WarnLevel)
+	log.SetLevel(log.InfoLevel)
 }
 
 func main() {
-	prefix := "/list/"
-	http.HandleFunc(prefix, errWrapper(fileListing.HandleFileList))
+	//dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	//util.PanicErr(err)
+	//log.Infof("Current path: %s", dir)
+
+	http.HandleFunc("/", errWrapper(fileListing.HandleFileList))
 
 	err := http.ListenAndServe(":8888", nil)
 	util.PanicErr(err)
