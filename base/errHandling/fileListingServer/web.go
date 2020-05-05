@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/essenwbb/learb_go_test/base/errHandling/fileListingServer/fileListing"
 	"github.com/essenwbb/learb_go_test/base/errHandling/fileListingServer/util"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
 )
@@ -13,7 +14,7 @@ func errWrapper(handler appHandler) func(http.ResponseWriter, *http.Request) {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		err := handler(writer, request)
 		if err != nil {
-
+			log.Warnf("Error Handling request: %s", err.Error())
 			code := http.StatusOK
 			switch {
 			case os.IsNotExist(err):
@@ -27,6 +28,12 @@ func errWrapper(handler appHandler) func(http.ResponseWriter, *http.Request) {
 		}
 	}
 
+}
+
+func init() {
+	log.SetFormatter(&log.TextFormatter{})
+	log.SetOutput(os.Stdout)
+	log.SetLevel(log.WarnLevel)
 }
 
 func main() {
